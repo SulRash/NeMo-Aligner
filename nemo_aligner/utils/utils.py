@@ -30,14 +30,14 @@ from unittest.mock import patch
 import torch
 from megatron.core.dist_checkpointing.mapping import ShardedObject, ShardedTensorFactory
 from megatron.core.num_microbatches_calculator import reconfigure_num_microbatches_calculator
+from omegaconf import DictConfig, OmegaConf
+from torch.masked import as_masked_tensor
+
 from nemo.collections.nlp.modules.common.megatron.utils import get_ltor_masks_and_position_ids
 from nemo.collections.nlp.parts.nlp_overrides import NLPSaveRestoreConnector
 from nemo.core.classes.mixins.adapter_mixins import AdapterModuleMixin
 from nemo.utils import AppState, logging
 from nemo.utils.exp_manager import NeMoModelCheckpoint
-from omegaconf import DictConfig, OmegaConf
-from torch.masked import as_masked_tensor
-
 from nemo_aligner.models.nlp.gpt.gpt_reward_model import GPTRewardModel
 
 
@@ -56,7 +56,9 @@ class CustomSaveRestoreConnector(NLPSaveRestoreConnector):
             return super().restore_from(*args, replace_sharded_tensor_key=self.__replace_sharded_tensor_key, **kwargs)
 
         with patch.object(GPTRewardModel, "return_rm_head_in_state_dict", False):
-            output = super().restore_from(*args, replace_sharded_tensor_key=self.__replace_sharded_tensor_key, **kwargs)
+            output = super().restore_from(
+                *args, replace_sharded_tensor_key=self.__replace_sharded_tensor_key, **kwargs
+            )
 
         return output
 
@@ -95,7 +97,9 @@ def load_from_nemo(
     else:
         replace_sharded_tensor_key = None
 
-    connector = CustomSaveRestoreConnector(load_base_model_only=load_base_model_only, replace_sharded_tensor_key=replace_sharded_tensor_key)
+    connector = CustomSaveRestoreConnector(
+        load_base_model_only=load_base_model_only, replace_sharded_tensor_key=replace_sharded_tensor_key
+    )
 
     if is_2_0_ckpt:
         connector.model_weights_ckpt = "weights"
@@ -106,10 +110,7 @@ def load_from_nemo(
 
     if modify_config_fn is not None:
         origin_cfg = cls.restore_from(
-            restore_path=restore_path,
-            trainer=trainer,
-            return_config=True,
-            save_restore_connector=connector,
+            restore_path=restore_path, trainer=trainer, return_config=True, save_restore_connector=connector,
         )
         model_cfg = modify_config_fn(origin_cfg, model_cfg, add_cfg_to_tree=False)
 
@@ -403,15 +404,7 @@ def offload_distributed_adam(state_dict, force_clear_memory=False):
 
 def batch_pad_to_fixed_len(batch, max_batch_len, pad_token):
     batch_pad = torch.stack(
-        [
-            torch.cat(
-                [
-                    seq,
-                    torch.full((max_batch_len - len(seq),), pad_token, dtype=seq.dtype),
-                ]
-            )
-            for seq in batch
-        ]
+        [torch.cat([seq, torch.full((max_batch_len - len(seq),), pad_token, dtype=seq.dtype),]) for seq in batch]
     )
 
     return batch_pad
