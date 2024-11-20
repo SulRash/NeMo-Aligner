@@ -30,14 +30,14 @@ from unittest.mock import patch
 import torch
 from megatron.core.dist_checkpointing.mapping import ShardedObject, ShardedTensorFactory
 from megatron.core.num_microbatches_calculator import reconfigure_num_microbatches_calculator
+from omegaconf import DictConfig, OmegaConf
+from torch.masked import as_masked_tensor
+
 from nemo.collections.nlp.modules.common.megatron.utils import get_ltor_masks_and_position_ids
 from nemo.collections.nlp.parts.nlp_overrides import NLPSaveRestoreConnector
 from nemo.core.classes.mixins.adapter_mixins import AdapterModuleMixin
 from nemo.utils import AppState, logging
 from nemo.utils.exp_manager import NeMoModelCheckpoint
-from omegaconf import DictConfig, OmegaConf
-from torch.masked import as_masked_tensor
-
 from nemo_aligner.models.nlp.gpt.gpt_reward_model import GPTRewardModel
 
 
