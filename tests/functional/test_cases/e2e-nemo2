@@ -1,0 +1,60 @@
+#!/bin/bash
+# Copyright (c) 2024, NVIDIA CORPORATION.  All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+cd $SCRIPT_DIR
+
+set -eoux pipefail
+
+# This is an e2e test testing the following workflow:
+#
+#  1. train a dummy llama3 nemo 2.0 checkpoint
+#  2. perform dpo on it and save nemo 1.0 checkpoint
+#  3. convert nemo 1.0 checkpoint to 2.0
+#  4. perform eval on this newly convert 2.0 checkpoint
+
+RESTORE_PATH=/tmp/$(basename $0)-ckpt-dir
+CONVERTED_PATH=/tmp/$(basename $0)-convert-dir
+rm -rf $RESTORE_PATH $CONVERTED_PATH
+
+
+if ! pip show nemo-run &>/dev/null; then
+  echo "[ERROR] nemo-run is needed for this test. Please visit installation instructions: https://github.com/NVIDIA/NeMo-Run?tab=readme-ov-file#install-nemo-run"
+  exit 1
+fi
+
+
+####################
+# Step 1: Pretrain #
+####################
+python3 /opt/NeMo/tests/collections/llm/llama3_pretraining.py --ckpt-dir $RESTORE_PATH
+
+#################
+# Step 2: Align #
+#################
+PRETRAINED_CHECKPOINT_NEMO_FILE=$RESTORE_PATH \
+  bash ../dpo.sh
+
+###################
+# Step 3: Convert #
+###################
+python3 /opt/NeMo/scripts/checkpoint_converters/convert_nemo1_to_nemo2.py --input $RESTORE_PATH --output $CONVERTED_PATH
+
+################
+# Step 4: Eval #
+################
+python /opt/NeMo/scripts/llm/llama3_generate.py  --ckpt-dir $CONVERTED_PATH
+
+echo "[Finished] $0"

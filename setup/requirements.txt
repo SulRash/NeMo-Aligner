@@ -2,3 +2,4 @@ jsonlines
 megatron_core>=0.8
 nemo_toolkit[nlp]
 nvidia-pytriton
+git+https://github.com/NVIDIA/NeMo-Run.git@6b00501e68d56070bb4fb9808ab11bb8d0f03b51  # on main
