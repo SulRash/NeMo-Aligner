@@ -18,7 +18,7 @@ from omegaconf.omegaconf import OmegaConf
 from nemo.core.config import hydra_runner
 from nemo.utils import logging
 from nemo.utils.exp_manager import exp_manager
-from nemo_aligner.algorithms.supervised import SupervisedTrainer
+from nemo_aligner.algorithms.supervised_evaluator import SupervisedEvaluator
 from nemo_aligner.data.nlp.builders import (
     build_dataloader,
     build_train_valid_test_regression_rm_datasets,
@@ -134,7 +134,7 @@ def main(cfg) -> None:
 
     timer = Timer(cfg.exp_manager.get("max_time_per_run"))
 
-    rm_trainer = SupervisedTrainer(
+    rm_trainer = SupervisedEvaluator(
         cfg=cfg.trainer.rm,
         model=ptl_model,
         optimizer=optimizer,
